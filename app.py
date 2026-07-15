@@ -40,37 +40,75 @@ def obter_cursor(banco, dictionary=False):
             return banco.cursor()
 
 # 3. VERIFICAÇÃO LOCAL DO BANCO (Só roda no computador local)
-def verificar_e_atualizar_banco_local():
-    # Só roda as alterações se não estiver na nuvem (evita erros no Postgres do Render)
-    if not os.environ.get("DATABASE_URL"):
-        try:
-            banco = conectar_banco()
-            cursor = banco.cursor()
+# 3. CRIAÇÃO AUTOMÁTICA DAS TABELAS (Roda local e na nuvem de graça)
+def inicializar_banco_de_dados():
+    try:
+        banco = conectar_banco()
+        cursor = banco.cursor()
+        
+        # Se for PostgreSQL (Render)
+        if isinstance(banco, psycopg2.extensions.connection):
+            # Criação das tabelas no Postgres
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id SERIAL PRIMARY KEY,
+                    nome VARCHAR(100) NOT NULL UNIQUE,
+                    email VARCHAR(100) NOT NULL UNIQUE,
+                    senha VARCHAR(255) NOT NULL
+                );
+                
+                CREATE TABLE IF NOT EXISTS livros (
+                    id SERIAL PRIMARY KEY,
+                    titulo VARCHAR(255) NOT NULL,
+                    autor VARCHAR(100) NOT NULL,
+                    genero VARCHAR(50)
+                );
+                
+                CREATE TABLE IF NOT EXISTS status_leitura (
+                    id SERIAL PRIMARY KEY,
+                    nome VARCHAR(50) NOT NULL UNIQUE
+                );
+                
+                CREATE TABLE IF NOT EXISTS leituras (
+                    id SERIAL PRIMARY KEY,
+                    id_usuario INT REFERENCES usuarios(id) ON DELETE CASCADE,
+                    id_livro INT REFERENCES livros(id) ON DELETE CASCADE,
+                    id_status INT REFERENCES status_leitura(id) ON DELETE CASCADE,
+                    nota INT CHECK (nota >= 1 AND nota <= 5),
+                    resenha TEXT,
+                    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                -- Insere os status padrão
+                INSERT INTO status_leitura (nome) VALUES ('Lendo') ON CONFLICT (nome) DO NOTHING;
+                INSERT INTO status_leitura (nome) VALUES ('Lido') ON CONFLICT (nome) DO NOTHING;
+                INSERT INTO status_leitura (nome) VALUES ('Quero Ler') ON CONFLICT (nome) DO NOTHING;
+                INSERT INTO status_leitura (nome) VALUES ('Abandonado') ON CONFLICT (nome) DO NOTHING;
+            """)
+            banco.commit()
+            print("✅ Tabelas verificadas/criadas com sucesso no PostgreSQL!")
             
-            # Garante que a coluna resenha exista no MySQL
+        else:
+            # Se for MySQL local (mantém o que você já tinha)
             try:
                 cursor.execute("ALTER TABLE leituras ADD COLUMN resenha TEXT;")
                 banco.commit()
             except mysql.connector.Error as err:
-                if err.errno != 1060: 
-                    print(f"⚠️ Erro ao adicionar coluna resenha: {err}")
-                    
-            # Garante que a coluna data_registro exista no MySQL
+                if err.errno != 1060: pass
+                
             try:
                 cursor.execute("ALTER TABLE leituras ADD COLUMN data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
                 banco.commit()
             except mysql.connector.Error as err:
-                if err.errno != 1060: 
-                    print(f"⚠️ Erro ao adicionar coluna data_registro: {err}")
+                if err.errno != 1060: pass
+                
+        cursor.close()
+        banco.close()
+    except Exception as err:
+        print(f"⚠️ Erro ao inicializar banco de dados: {err}")
 
-            cursor.close()
-            banco.close()
-        except Exception as err:
-            print(f"⚠️ Erro geral ao verificar banco local: {err}")
-
-# Executa a verificação local ao iniciar o servidor
-verificar_e_atualizar_banco_local()
-
+# Executa a criação/verificação ao iniciar o servidor
+inicializar_banco_de_dados()
 
 # ==================== ROTAS DA API ====================
 
