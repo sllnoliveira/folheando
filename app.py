@@ -254,7 +254,8 @@ def adicionar_leitura():
         cursor = obter_cursor(banco, dictionary=True) # Dicionário ajuda a pegar o ID retornado no Postgres
         
         if id_livro == 0 or id_livro == "0":
-            if not novo_titulo or not_autor:
+            # CORRIGIDO:
+            if not novo_titulo or not novo_autor: 
                 return jsonify({"erro": "Título e Autor do livro são necessários!"}), 400
             
             # Lógica inteligente para capturar o ID do livro criado (funciona no MySQL e Postgres)
