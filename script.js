@@ -223,7 +223,6 @@ function verificarNovoLivro() {
     }
 }
 
-// 7. SALVAR NOVA LEITURA (CORRIGIDO)
 async function salvarLeitura(event) {
     event.preventDefault();
 
@@ -245,11 +244,16 @@ async function salvarLeitura(event) {
         resenha: resenha
     };
 
-    // CORREÇÃO: Usando os IDs corretos do seu HTML
+    // AQUI ESTÁ O SEGREDO: Só envia se for novo livro (value === "0")
     if (id_livro === "0") {
         corpoRequisicao.novo_titulo = document.getElementById('novo-titulo').value;
-        corpoRequisicao.novo_autor = document.getElementById('novo-autor').value; // Corrigido aqui
+        corpoRequisicao.novo_autor = document.getElementById('novo-autor').value;
         corpoRequisicao.novo_genero = document.getElementById('novo-genero').value;
+    } else {
+        // Se for um livro já existente, garantimos que não enviamos nomes vazios
+        corpoRequisicao.novo_titulo = null;
+        corpoRequisicao.novo_autor = null;
+        corpoRequisicao.novo_genero = null;
     }
 
     try {
@@ -268,10 +272,11 @@ async function salvarLeitura(event) {
 
         alert("🎉 Leitura registrada com sucesso!");
         document.getElementById('form-leitura').reset();
+        // Esconde os campos extras
         document.getElementById('campos-novo-livro').classList.add('oculto');
         mostrarSecao('secao-relatorio');
 
     } catch (erro) {
-        alert('Erro de conexão ao salvar leitura.');
+        alert('Erro de conexão ao salvar leitura: ' + erro.message);
     }
 }
