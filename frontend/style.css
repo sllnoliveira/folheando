@@ -1,0 +1,251 @@
+/* Configurações Globais (Reset) */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #fcf8f9;
+    color: #2c2c2c;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* 1. CABEÇALHO */
+.cabecalho {
+    background-color: #ffffff;
+    border-bottom: 2px solid #ffd5df;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(216, 27, 96, 0.05);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo h1 {
+    font-size: 1.5rem;
+    color: #d81b60;
+    font-weight: 700;
+}
+
+.icone-livro {
+    font-size: 1.8rem;
+}
+
+.usuario-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 600;
+    color: #555;
+}
+
+/* 2. BOTÕES */
+button {
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-principal {
+    background-color: #ffffff;
+    color: #d81b60;
+    border: 2px solid #ffd5df;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.btn-principal:hover {
+    background-color: #ffd5df;
+    border-color: #ff7597;
+}
+
+.btn-secundario {
+    background-color: #ff7597;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.btn-secundario:hover {
+    background-color: #d81b60;
+}
+
+.btn-acao {
+    background-color: #d81b60;
+    color: white;
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+}
+
+.btn-acao:hover {
+    background-color: #b0124a;
+}
+
+/* 3. ESTRUTURA PRINCIPAL */
+.conteudo-principal {
+    flex: 1;
+    max-width: 800px;
+    width: 100%;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.navegacao {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    justify-content: center;
+}
+
+/* Classe curinga para esconder elementos */
+.oculto {
+    display: none !important;
+}
+
+/* 4. TELAS E SEÇÕES */
+.tela-secao {
+    background-color: #ffffff;
+    border: 1px solid #ffd5df;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(216, 27, 96, 0.03);
+}
+
+.tela-secao h2 {
+    color: #d81b60;
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+    border-bottom: 2px solid #ffd5df;
+    padding-bottom: 0.5rem;
+}
+
+/* Formulários */
+.cartao-formulario {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+}
+
+.campo label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.campo input, .campo select, .campo textarea {
+    padding: 0.7rem;
+    border: 2px solid #ffd5df;
+    border-radius: 8px;
+    outline: none;
+    font-size: 1rem;
+}
+
+.campo input:focus, .campo select:focus, .campo textarea:focus {
+    border-color: #ff7597;
+    box-shadow: 0 0 0 3px rgba(255, 117, 151, 0.15);
+}
+
+/* 5. LISTA DE LEITURAS (RELATÓRIO) */
+#filtro-relatorio-container {
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#filtro-tipo {
+    padding: 0.4rem;
+    border: 1px solid #ffd5df;
+    border-radius: 6px;
+}
+
+.lista-leituras {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.cartao-leitura {
+    border-left: 5px solid #ff7597;
+    background-color: #fffafb;
+    padding: 1.2rem;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.leitura-topo {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 0.5rem;
+}
+
+.leitor-nome {
+    font-weight: bold;
+    color: #d81b60;
+}
+
+.leitura-titulo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+}
+
+.leitura-info {
+    font-size: 0.95rem;
+    margin-bottom: 0.8rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    background-color: #ffd5df;
+    color: #d81b60;
+}
+
+.resenha-texto {
+    background-color: #ffffff;
+    border: 1px dashed #ffd5df;
+    padding: 0.8rem;
+    border-radius: 6px;
+    font-style: italic;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+/* 6. RODAPÉ */
+.rodape {
+    text-align: center;
+    padding: 1.5rem;
+    color: #888;
+    font-size: 0.85rem;
+    border-top: 1px solid #ffd5df;
+    background-color: #ffffff;
+    margin-top: auto;
+}

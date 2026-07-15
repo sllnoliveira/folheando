@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folheando - Seu Gerenciador de Leituras</title>
+    <!-- Vinculamos o nosso arquivo de estilo CSS aqui -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- CABEÇALHO DO SITE -->
+    <header class="cabecalho">
+        <div class="logo">
+            <span class="icone-livro">📖</span>
+            <h1>Folheando</h1>
+        </div>
+        <!-- Área de identificação do usuário e botões de ação rápida -->
+        <div class="usuario-container">
+            <span id="usuario-status">Modo Visitante 👤</span>
+            <button id="btn-logout" class="btn-secundario oculto" onclick="deslogar()">Sair 🚪</button>
+        </div>
+    </header>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <main class="conteudo-principal">
+
+        <!-- SEÇÃO 1: MENU DE NAVEGAÇÃO (BOTÕES) -->
+        <section class="navegacao">
+            <button class="btn-principal" onclick="mostrarSecao('secao-relatorio')">Ver Leituras 📊</button>
+            <button id="btn-nav-login" class="btn-principal" onclick="mostrarSecao('secao-login')">Fazer Login 🔑</button>
+            <button id="btn-nav-cadastro" class="btn-principal" onclick="mostrarSecao('secao-cadastro')">Cadastrar-se 👤</button>
+            <button id="btn-nav-nova-leitura" class="btn-principal oculto" onclick="mostrarSecao('secao-nova-leitura')">Nova Leitura 📚</button>
+        </section>
+
+        <!-- SEÇÃO 2: RELATÓRIO DE LEITURAS -->
+        <section id="secao-relatorio" class="tela-secao">
+            <h2>📊 Relatório de Leituras</h2>
+            
+            <!-- Filtro de relatório (só aparece se estiver logado) -->
+            <div id="filtro-relatorio-container" class="oculto">
+                <label for="filtro-tipo">Exibir:</label>
+                <select id="filtro-tipo" onchange="carregarRelatorio()">
+                    <option value="todos">Todos os Leitores (Geral)</option>
+                    <option value="meu">Apenas Minhas Leituras</option>
+                </select>
+            </div>
+
+            <!-- Lista de leituras que será preenchida pelo JavaScript -->
+            <div id="lista-leituras" class="lista-leituras">
+                <p class="carregando">Carregando leituras...</p>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 3: TELA DE LOGIN -->
+        <section id="secao-login" class="tela-secao oculto">
+            <div class="cartao-formulario">
+                <h2>🔑 Entrar no Folheando</h2>
+                <form id="form-login" onsubmit="realizarLogin(event)">
+                    <div class="campo">
+                        <label for="login-nick">Seu Nickname:</label>
+                        <input type="text" id="login-nick" required placeholder="Ex: Mel">
+                    </div>
+                    <div class="campo">
+                        <label for="login-senha">Sua Senha:</label>
+                        <input type="password" id="login-senha" required placeholder="Sua senha secreta">
+                    </div>
+                    <button type="submit" class="btn-acao">Entrar</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 4: TELA DE CADASTRO -->
+        <section id="secao-cadastro" class="tela-secao oculto">
+            <div class="cartao-formulario">
+                <h2>👤 Criar Nova Conta</h2>
+                <form id="form-cadastro" onsubmit="realizarCadastro(event)">
+                    <div class="campo">
+                        <label for="cadastro-nick">Nickname Único:</label>
+                        <input type="text" id="cadastro-nick" required placeholder="Ex: Pedro">
+                    </div>
+                    <div class="campo">
+                        <label for="cadastro-email">E-mail:</label>
+                        <input type="email" id="cadastro-email" required placeholder="Ex: pedro@email.com">
+                    </div>
+                    <div class="campo">
+                        <label for="cadastro-senha">Senha de Acesso:</label>
+                        <input type="password" id="cadastro-senha" required placeholder="Crie uma senha segura">
+                    </div>
+                    <button type="submit" class="btn-acao">Cadastrar</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- SEÇÃO 5: TELA DE ADICIONAR LEITURA -->
+        <section id="secao-nova-leitura" class="tela-secao oculto">
+            <div class="cartao-formulario">
+                <h2>📚 Vincular Nova Leitura</h2>
+                <form id="form-leitura" onsubmit="salvarLeitura(event)">
+                    
+                    <!-- Escolha do livro -->
+                    <div class="campo">
+                        <label for="leitura-livro">Escolha o Livro:</label>
+                        <select id="leitura-livro" onchange="verificarNovoLivro()" required>
+                            <!-- Será preenchido dinamicamente pelo JavaScript com os livros do banco -->
+                        </select>
+                    </div>
+
+                    <!-- Campos extras que aparecem se o usuário escolher cadastrar um livro novo -->
+                    <div id="campos-novo-livro" class="oculto">
+                        <h3>📖 Cadastrar Novo Livro</h3>
+                        <div class="campo">
+                            <label for="novo-titulo">Título do Livro:</label>
+                            <input type="text" id="novo-titulo" placeholder="Ex: Dom Casmurro">
+                        </div>
+                        <div class="campo">
+                            <label for="novo-autor">Autor:</label>
+                            <input type="text" id="novo-autor" placeholder="Ex: Machado de Assis">
+                        </div>
+                        <div class="campo">
+                            <label for="novo-genero">Gênero:</label>
+                            <input type="text" id="novo-genero" placeholder="Ex: Romance clássico">
+                        </div>
+                    </div>
+
+                    <!-- Status da leitura -->
+                    <div class="campo">
+                        <label for="leitura-status">Status:</label>
+                        <select id="leitura-status" required>
+                            <option value="1">Lendo 📖</option>
+                            <option value="2">Lido ✅</option>
+                            <option value="3">Quero Ler 📌</option>
+                            <option value="4">Abandonei ❌</option>
+                        </select>
+                    </div>
+
+                    <!-- Nota -->
+                    <div class="campo">
+                        <label for="leitura-nota">Sua Nota (1 a 5 - opcional):</label>
+                        <input type="number" id="leitura-nota" min="1" max="5" placeholder="Deixe em branco se não terminou">
+                    </div>
+
+                    <!-- Resenha -->
+                    <div class="campo">
+                        <label for="leitura-resenha">Escreva sua Resenha/Comentário (opcional):</label>
+                        <textarea id="leitura-resenha" rows="4" placeholder="O que você achou desse livro?"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-acao">Salvar Leitura</button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- RODAPÉ -->
+    <footer class="rodape">
+        <p>Folheando © 2026 - Desenvolvido por Suellen Oliveira</p>
+    </footer>
+
+    <!-- Vinculamos a nossa inteligência do JavaScript aqui -->
+    <script src="script.js"></script>
+</body>
+</html>
