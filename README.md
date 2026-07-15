@@ -1,3 +1,6 @@
+Confira o projeto rodando:
+https://sllnoliveira.github.io/folheando/
+
 # 📖 Folheando - Gerenciador de Leituras
 
 O **Folheando** é uma aplicação Full Stack de diário de leitura pessoal. Ele permite aos usuários gerenciar seus livros, atualizar o status de leitura, dar notas de 1 a 5 e escrever resenhas com a data de registro salva automaticamente.
@@ -27,3 +30,6 @@ A interface do usuário foi planejada com um design limpo, moderno e personaliza
 - `/versao_terminal`: Pasta contendo os códigos iniciais do sistema rodando via terminal (histórico do projeto).
 - `app.py`: Arquivo principal do servidor em Flask.
 - `requirements.txt`: Lista de bibliotecas usadas no Python.
+
+
+...anda estou desenvolvendo.
