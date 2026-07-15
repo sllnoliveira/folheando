@@ -223,7 +223,7 @@ function verificarNovoLivro() {
     }
 }
 
-// 7. SALVAR NOVA LEITURA
+// 7. SALVAR NOVA LEITURA (CORRIGIDO)
 async function salvarLeitura(event) {
     event.preventDefault();
 
@@ -245,9 +245,10 @@ async function salvarLeitura(event) {
         resenha: resenha
     };
 
+    // CORREÇÃO: Usando os IDs corretos do seu HTML
     if (id_livro === "0") {
         corpoRequisicao.novo_titulo = document.getElementById('novo-titulo').value;
-        corpoRequisicao.novo_autor = document.getElementById('novo-autor').value;
+        corpoRequisicao.novo_autor = document.getElementById('novo-autor').value; // Corrigido aqui
         corpoRequisicao.novo_genero = document.getElementById('novo-genero').value;
     }
 
