@@ -1,61 +1,87 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Função para garantir a estrutura do banco
-def verificar_e_atualizar_banco():
-    try:
-        banco = mysql.connector.connect(
+# 1. FUNÇÃO INTELIGENTE DE CONEXÃO (Detecta local ou nuvem)
+def conectar_banco():
+    url_banco_nuvem = os.environ.get("DATABASE_URL")
+    
+    if url_banco_nuvem:
+        # Se estiver no Render (PostgreSQL)
+        return psycopg2.connect(url_banco_nuvem)
+    else:
+        # Se estiver no seu computador (MySQL local)
+        return mysql.connector.connect(
             host="localhost",
-            user="root",
-            password="",
+            user="root",        
+            password="",        
             database="folheando"
         )
-        cursor = banco.cursor()
-        
-        # 1. Garante que a coluna resenha exista
+
+# 2. FUNÇÃO AUXILIAR PARA GERAR O CURSOR CORRETO
+def obter_cursor(banco, dictionary=False):
+    # Verifica se é uma conexão PostgreSQL (psycopg2)
+    if isinstance(banco, psycopg2.extensions.connection):
+        if dictionary:
+            return banco.cursor(cursor_factory=RealDictCursor)
+        else:
+            return banco.cursor()
+    else:
+        # Se for MySQL local
+        if dictionary:
+            return banco.cursor(dictionary=True)
+        else:
+            return banco.cursor()
+
+# 3. VERIFICAÇÃO LOCAL DO BANCO (Só roda no computador local)
+def verificar_e_atualizar_banco_local():
+    # Só roda as alterações se não estiver na nuvem (evita erros no Postgres do Render)
+    if not os.environ.get("DATABASE_URL"):
         try:
-            cursor.execute("ALTER TABLE leituras ADD COLUMN resenha TEXT;")
-            banco.commit()
-        except mysql.connector.Error as err:
-            if err.errno != 1060: # Ignora se o erro for 'coluna já existe'
-                print(f"⚠️ Erro ao adicionar coluna resenha: {err}")
-                
-        # 2. Garante que a coluna data_registro exista (salva automaticamente a data atual)
-        try:
-            cursor.execute("ALTER TABLE leituras ADD COLUMN data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
-            banco.commit()
-        except mysql.connector.Error as err:
-            if err.errno != 1060: # Ignora se o erro for 'coluna já existe'
-                print(f"⚠️ Erro ao adicionar coluna data_registro: {err}")
+            banco = conectar_banco()
+            cursor = banco.cursor()
+            
+            # Garante que a coluna resenha exista no MySQL
+            try:
+                cursor.execute("ALTER TABLE leituras ADD COLUMN resenha TEXT;")
+                banco.commit()
+            except mysql.connector.Error as err:
+                if err.errno != 1060: 
+                    print(f"⚠️ Erro ao adicionar coluna resenha: {err}")
+                    
+            # Garante que a coluna data_registro exista no MySQL
+            try:
+                cursor.execute("ALTER TABLE leituras ADD COLUMN data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+                banco.commit()
+            except mysql.connector.Error as err:
+                if err.errno != 1060: 
+                    print(f"⚠️ Erro ao adicionar coluna data_registro: {err}")
 
-        cursor.close()
-        banco.close()
-    except Exception as err:
-        print(f"⚠️ Erro geral ao verificar banco: {err}")
+            cursor.close()
+            banco.close()
+        except Exception as err:
+            print(f"⚠️ Erro geral ao verificar banco local: {err}")
 
-verificar_e_atualizar_banco()
+# Executa a verificação local ao iniciar o servidor
+verificar_e_atualizar_banco_local()
 
-# Função auxiliar para conectar ao banco de dados facilmente
-def conectar_banco():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="folheando"
-    )
 
-# 1. ROTA DE RELATÓRIO (Atualizada para puxar a data_registro)
+# ==================== ROTAS DA API ====================
+
+# 1. ROTA DE RELATÓRIO
 @app.route('/relatorio', methods=['GET'])
 def obtener_relatorio():
     usuario_filtro = request.args.get('usuario')
     
     try:
         banco = conectar_banco()
-        cursor = banco.cursor(dictionary=True)
+        cursor = obter_cursor(banco, dictionary=True)
         
         if usuario_filtro:
             comando_sql = """
@@ -66,7 +92,7 @@ def obtener_relatorio():
             INNER JOIN livros ON leituras.id_livro = livros.id
             INNER JOIN status_leitura ON leituras.id_status = status_leitura.id
             WHERE usuarios.nome = %s
-            ORDER BY leituras.data_registro DESC; -- Ordena pelas leituras mais recentes primeiro!
+            ORDER BY leituras.data_registro DESC;
             """
             cursor.execute(comando_sql, (usuario_filtro,))
         else:
@@ -77,7 +103,7 @@ def obtener_relatorio():
             INNER JOIN usuarios ON leituras.id_usuario = usuarios.id
             INNER JOIN livros ON leituras.id_livro = livros.id
             INNER JOIN status_leitura ON leituras.id_status = status_leitura.id
-            ORDER BY leituras.data_registro DESC; -- Ordena pelas leituras mais recentes primeiro!
+            ORDER BY leituras.data_registro DESC;
             """
             cursor.execute(comando_sql)
             
@@ -85,7 +111,6 @@ def obtener_relatorio():
         cursor.close()
         banco.close()
         
-        # O Flask converte automaticamente objetos de data (datetime) para string no JSON
         return jsonify(resultados), 200
     except Exception as erro:
         return jsonify({"erro": f"Erro ao buscar relatório: {erro}"}), 500
@@ -100,7 +125,7 @@ def login():
     
     try:
         banco = conectar_banco()
-        cursor = banco.cursor()
+        cursor = obter_cursor(banco)
         
         comando_sql = "SELECT id, nome FROM usuarios WHERE nome = %s AND senha = %s;"
         cursor.execute(comando_sql, (nick, senha))
@@ -137,7 +162,7 @@ def cadastrar_usuario():
         
     try:
         banco = conectar_banco()
-        cursor = banco.cursor()
+        cursor = obter_cursor(banco)
         
         cursor.execute("SELECT id FROM usuarios WHERE nome = %s;", (nick,))
         if cursor.fetchone():
@@ -162,7 +187,7 @@ def cadastrar_usuario():
 def listar_livros():
     try:
         banco = conectar_banco()
-        cursor = banco.cursor(dictionary=True)
+        cursor = obter_cursor(banco, dictionary=True)
         cursor.execute("SELECT id, titulo, autor, genero FROM livros;")
         livros = cursor.fetchall()
         cursor.close()
@@ -188,16 +213,25 @@ def adicionar_leitura():
     
     try:
         banco = conectar_banco()
-        cursor = banco.cursor()
+        cursor = obter_cursor(banco, dictionary=True) # Dicionário ajuda a pegar o ID retornado no Postgres
         
         if id_livro == 0 or id_livro == "0":
-            if not novo_titulo or not novo_autor:
+            if not novo_titulo or not_autor:
                 return jsonify({"erro": "Título e Autor do livro são necessários!"}), 400
-                
-            comando_livro = "INSERT INTO livros (titulo, autor, genero) VALUES (%s, %s, %s);"
-            cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero))
-            banco.commit()
-            id_livro = cursor.lastrowid
+            
+            # Lógica inteligente para capturar o ID do livro criado (funciona no MySQL e Postgres)
+            if isinstance(banco, psycopg2.extensions.connection):
+                # No Postgres usamos RETURNING id
+                comando_livro = "INSERT INTO livros (titulo, autor, genero) VALUES (%s, %s, %s) RETURNING id;"
+                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero))
+                banco.commit()
+                id_livro = cursor.fetchone()['id']
+            else:
+                # No MySQL local usamos cursor.lastrowid
+                comando_livro = "INSERT INTO livros (titulo, autor, genero) VALUES (%s, %s, %s);"
+                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero))
+                banco.commit()
+                id_livro = cursor.lastrowid
             
         comando_leitura = """
         INSERT INTO leituras (id_usuario, id_livro, id_status, nota, resenha)
