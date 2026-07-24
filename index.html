@@ -26,11 +26,14 @@
     <main class="conteudo-principal">
 
         <!-- SEÇÃO 1: MENU DE NAVEGAÇÃO (BOTÕES) -->
-        <section class="navegacao">
+        
+            <section class="navegacao">
             <button class="btn-principal" onclick="mostrarSecao('secao-relatorio')">Ver Leituras 📊</button>
+            <button class="btn-principal" onclick="mostrarSecao('secao-biblioteca')">Biblioteca 📚</button>
             <button id="btn-nav-login" class="btn-principal" onclick="mostrarSecao('secao-login')">Fazer Login 🔑</button>
             <button id="btn-nav-cadastro" class="btn-principal" onclick="mostrarSecao('secao-cadastro')">Cadastrar-se 👤</button>
-            <button id="btn-nav-nova-leitura" class="btn-principal oculto" onclick="mostrarSecao('secao-nova-leitura')">Nova Leitura 📚</button>
+            <button id="btn-nav-nova-leitura" class="btn-principal oculto" onclick="mostrarSecao('secao-nova-leitura')">Nova Leitura 📖</button>
+        </section>
         </section>
 
         <!-- SEÇÃO 2: RELATÓRIO DE LEITURAS -->
@@ -49,6 +52,15 @@
             <!-- Lista de leituras que será preenchida pelo JavaScript -->
             <div id="lista-leituras" class="lista-leituras">
                 <p class="carregando">Carregando leituras...</p>
+            </div>
+        </section>
+        <section id="secao-biblioteca" class="tela-secao oculto">
+            <h2>📚 Biblioteca de Livros</h2>
+            <p>Explore todos os livros cadastrados na plataforma e acesse seus links de leitura ou compra.</p>
+            
+            <!-- Lista de livros da biblioteca que será preenchida pelo JavaScript -->
+            <div id="lista-biblioteca" class="lista-leituras">
+                <p class="carregando">Carregando biblioteca...</p>
             </div>
         </section>
 
@@ -121,6 +133,10 @@
                             <label for="novo-genero">Gênero:</label>
                             <input type="text" id="novo-genero" placeholder="Ex: Romance clássico">
                         </div>
+                        <div class="campo">
+                              <label for="novo-link">Link do Livro (PDF ou Compra):</label>
+                              <input type="url" id="novo-link" placeholder="Ex: https://site.com/livro.pdf">
+                        </div>
                     </div>
 
                     <!-- Status da leitura -->
@@ -134,16 +150,17 @@
                         </select>
                     </div>
 
-                    <!-- Nota -->
-                    <div class="campo">
-                        <label for="leitura-nota">Sua Nota (1 a 5 - opcional):</label>
-                        <input type="number" id="leitura-nota" min="1" max="5" placeholder="Deixe em branco se não terminou">
-                    </div>
-
-                    <!-- Resenha -->
-                    <div class="campo">
-                        <label for="leitura-resenha">Escreva sua Resenha/Comentário (opcional):</label>
-                        <textarea id="leitura-resenha" rows="4" placeholder="O que você achou desse livro?"></textarea>
+                    <!-- Bloco de Nota e Resenha que vai sumir/aparecer dependendo do status -->
+                    <div id="bloco-avaliacao" style="display: none;">
+                        <div class="campo">
+                            <label for="leitura-nota">Nota (1 a 5):</label>
+                            <input type="number" id="leitura-nota" min="1" max="5">
+                        </div>
+                        
+                        <div class="campo">
+                            <label for="leitura-resenha">Resenha / Avaliação:</label>
+                            <textarea id="leitura-resenha" placeholder="Escreva o que achou do livro..."></textarea>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn-acao">Salvar Leitura</button>

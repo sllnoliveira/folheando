@@ -1,241 +1,143 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 import mysql.connector
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import os
 
 app = Flask(__name__)
 CORS(app)
 
-# 1. FUNÇÃO INTELIGENTE DE CONEXÃO (Detecta local ou nuvem)
 def conectar_banco():
-    url_banco_nuvem = os.environ.get("DATABASE_URL")
-    
-    if url_banco_nuvem:
-        # Se estiver no Render (PostgreSQL)
-        return psycopg2.connect(url_banco_nuvem)
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return psycopg2.connect(database_url, sslmode='require')
     else:
-        # Se estiver no seu computador (MySQL local)
         return mysql.connector.connect(
             host="localhost",
-            user="root",        
-            password="",        
+            user="root",
+            password="",
             database="folheando"
         )
 
-# 2. FUNÇÃO AUXILIAR PARA GERAR O CURSOR CORRETO
 def obter_cursor(banco, dictionary=False):
-    # Verifica se é uma conexão PostgreSQL (psycopg2)
     if isinstance(banco, psycopg2.extensions.connection):
-        if dictionary:
-            return banco.cursor(cursor_factory=RealDictCursor)
-        else:
-            return banco.cursor()
+        return banco.cursor(cursor_factory=RealDictCursor)
     else:
-        # Se for MySQL local
-        if dictionary:
-            return banco.cursor(dictionary=True)
-        else:
-            return banco.cursor()
+        return banco.cursor(dictionary=dictionary)
 
-# 3. VERIFICAÇÃO LOCAL DO BANCO (Só roda no computador local)
-# 3. CRIAÇÃO AUTOMÁTICA DAS TABELAS (Roda local e na nuvem de graça)
-def inicializar_banco_de_dados():
-    try:
-        banco = conectar_banco()
-        cursor = banco.cursor()
-        
-        # Se for PostgreSQL (Render)
-        if isinstance(banco, psycopg2.extensions.connection):
-            # Criação das tabelas no Postgres
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS usuarios (
-                    id SERIAL PRIMARY KEY,
-                    nome VARCHAR(100) NOT NULL UNIQUE,
-                    email VARCHAR(100) NOT NULL UNIQUE,
-                    senha VARCHAR(255) NOT NULL
-                );
-                
-                CREATE TABLE IF NOT EXISTS livros (
-                    id SERIAL PRIMARY KEY,
-                    titulo VARCHAR(255) NOT NULL,
-                    autor VARCHAR(100) NOT NULL,
-                    genero VARCHAR(50)
-                );
-                
-                CREATE TABLE IF NOT EXISTS status_leitura (
-                    id SERIAL PRIMARY KEY,
-                    nome VARCHAR(50) NOT NULL UNIQUE
-                );
-                
-                CREATE TABLE IF NOT EXISTS leituras (
-                    id SERIAL PRIMARY KEY,
-                    id_usuario INT REFERENCES usuarios(id) ON DELETE CASCADE,
-                    id_livro INT REFERENCES livros(id) ON DELETE CASCADE,
-                    id_status INT REFERENCES status_leitura(id) ON DELETE CASCADE,
-                    nota INT CHECK (nota >= 1 AND nota <= 5),
-                    resenha TEXT,
-                    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-
-                -- Insere os status padrão
-                INSERT INTO status_leitura (nome) VALUES ('Lendo') ON CONFLICT (nome) DO NOTHING;
-                INSERT INTO status_leitura (nome) VALUES ('Lido') ON CONFLICT (nome) DO NOTHING;
-                INSERT INTO status_leitura (nome) VALUES ('Quero Ler') ON CONFLICT (nome) DO NOTHING;
-                INSERT INTO status_leitura (nome) VALUES ('Abandonado') ON CONFLICT (nome) DO NOTHING;
-            """)
-            banco.commit()
-            print("✅ Tabelas verificadas/criadas com sucesso no PostgreSQL!")
-            
-        else:
-            # Se for MySQL local (mantém o que você já tinha)
-            try:
-                cursor.execute("ALTER TABLE leituras ADD COLUMN resenha TEXT;")
-                banco.commit()
-            except mysql.connector.Error as err:
-                if err.errno != 1060: pass
-                
-            try:
-                cursor.execute("ALTER TABLE leituras ADD COLUMN data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
-                banco.commit()
-            except mysql.connector.Error as err:
-                if err.errno != 1060: pass
-                
-        cursor.close()
-        banco.close()
-    except Exception as err:
-        print(f"⚠️ Erro ao inicializar banco de dados: {err}")
-
-# Executa a criação/verificação ao iniciar o servidor
-inicializar_banco_de_dados()
-
-# ==================== ROTAS DA API ====================
-
-# 1. ROTA DE RELATÓRIO
-@app.route('/relatorio', methods=['GET'])
-def obtener_relatorio():
-    usuario_filtro = request.args.get('usuario')
-    
-    try:
-        banco = conectar_banco()
-        cursor = obter_cursor(banco, dictionary=True)
-        
-        if usuario_filtro:
-            comando_sql = """
-            SELECT usuarios.nome as leitor, livros.titulo, status_leitura.nome as status, 
-                   leituras.nota, leituras.resenha, leituras.data_registro
-            FROM leituras
-            INNER JOIN usuarios ON leituras.id_usuario = usuarios.id
-            INNER JOIN livros ON leituras.id_livro = livros.id
-            INNER JOIN status_leitura ON leituras.id_status = status_leitura.id
-            WHERE usuarios.nome = %s
-            ORDER BY leituras.data_registro DESC;
-            """
-            cursor.execute(comando_sql, (usuario_filtro,))
-        else:
-            comando_sql = """
-            SELECT usuarios.nome as leitor, livros.titulo, status_leitura.nome as status, 
-                   leituras.nota, leituras.resenha, leituras.data_registro
-            FROM leituras
-            INNER JOIN usuarios ON leituras.id_usuario = usuarios.id
-            INNER JOIN livros ON leituras.id_livro = livros.id
-            INNER JOIN status_leitura ON leituras.id_status = status_leitura.id
-            ORDER BY leituras.data_registro DESC;
-            """
-            cursor.execute(comando_sql)
-            
-        resultados = cursor.fetchall()
-        cursor.close()
-        banco.close()
-        
-        return jsonify(resultados), 200
-    except Exception as erro:
-        return jsonify({"erro": f"Erro ao buscar relatório: {erro}"}), 500
-
-
-# 2. ROTA DE LOGIN
-@app.route('/login', methods=['POST'])
-def login():
-    dados = request.json
-    nick = dados.get('nick')
-    senha = dados.get('senha')
-    
-    try:
-        banco = conectar_banco()
-        cursor = obter_cursor(banco)
-        
-        comando_sql = "SELECT id, nome FROM usuarios WHERE nome = %s AND senha = %s;"
-        cursor.execute(comando_sql, (nick, senha))
-        resultado = cursor.fetchone()
-        
-        cursor.close()
-        banco.close()
-        
-        if resultado:
-            return jsonify({
-                "mensagem": "Login realizado com sucesso!",
-                "usuario": {
-                    "id": resultado[0],
-                    "nome": resultado[1]
-                }
-            }), 200
-        else:
-            return jsonify({"erro": "Usuário ou senha incorretos!"}), 401
-            
-    except Exception as erro:
-        return jsonify({"erro": f"Erro no servidor: {erro}"}), 500
-
-
-# 3. ROTA DE CADASTRO DE USUÁRIO
-@app.route('/cadastrar_usuario', methods=['POST'])
-def cadastrar_usuario():
-    dados = request.json
-    nick = dados.get('nick')
-    email = dados.get('email')
-    senha = dados.get('senha')
-    
-    if not nick or not email or not senha:
-        return jsonify({"erro": "Todos os campos são obrigatórios!"}), 400
-        
-    try:
-        banco = conectar_banco()
-        cursor = obter_cursor(banco)
-        
-        cursor.execute("SELECT id FROM usuarios WHERE nome = %s;", (nick,))
-        if cursor.fetchone():
-            cursor.close()
-            banco.close()
-            return jsonify({"erro": "Este nickname já está em uso!"}), 400
-            
-        comando_sql = "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s);"
-        cursor.execute(comando_sql, (nick, email, senha))
-        banco.commit()
-        
-        cursor.close()
-        banco.close()
-        
-        return jsonify({"mensagem": f"Usuário '{nick}' criado com sucesso!"}), 201
-    except Exception as erro:
-        return jsonify({"erro": f"Erro ao cadastrar: {erro}"}), 500
-
-
-# 4. ROTA PARA LISTAR LIVROS CADASTRADOS
 @app.route('/livros', methods=['GET'])
 def listar_livros():
     try:
         banco = conectar_banco()
         cursor = obter_cursor(banco, dictionary=True)
-        cursor.execute("SELECT id, titulo, autor, genero FROM livros;")
+        
+        if isinstance(banco, psycopg2.extensions.connection):
+            query = """
+                SELECT 
+                    l.id, l.titulo, l.autor, l.genero, l.link,
+                    COALESCE(AVG(lt.nota), 0) as media_notas,
+                    STRING_AGG(CONCAT(u.nome, ': ', lt.resenha), '|||') as resenhas
+                FROM livros l
+                LEFT JOIN leituras lt ON l.id = lt.id_livro AND lt.resenha IS NOT NULL AND lt.resenha != ''
+                LEFT JOIN usuarios u ON lt.id_usuario = u.id
+                GROUP BY l.id, l.titulo, l.autor, l.genero, l.link;
+            """
+        else:
+            query = """
+                SELECT 
+                    l.id, l.titulo, l.autor, l.genero, l.link,
+                    COALESCE(AVG(lt.nota), 0) as media_notas,
+                    GROUP_CONCAT(CONCAT(u.nome, ': ', lt.resenha) SEPARATOR '|||') as resenhas
+                FROM livros l
+                LEFT JOIN leituras lt ON l.id = lt.id_livro AND lt.resenha IS NOT NULL AND lt.resenha != ''
+                LEFT JOIN usuarios u ON lt.id_usuario = u.id
+                GROUP BY l.id, l.titulo, l.autor, l.genero, l.link;
+            """
+        
+        cursor.execute(query)
         livros = cursor.fetchall()
         cursor.close()
         banco.close()
         return jsonify(livros), 200
     except Exception as erro:
-        return jsonify({"erro": f"Erro ao listar livros: {erro}"}), 500
+        return jsonify({"erro": f"Erro ao carregar livros: {erro}"}), 500
 
+@app.route('/relatorio', methods=['GET'])
+def listar_relatorio():
+    usuario_filtro = request.args.get('usuario')
+    try:
+        banco = conectar_banco()
+        cursor = obter_cursor(banco, dictionary=True)
+        
+        if usuario_filtro:
+            query = """
+                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
+                FROM leituras l
+                JOIN usuarios u ON l.id_usuario = u.id
+                JOIN livros liv ON l.id_livro = liv.id
+                JOIN status_leitura s ON l.id_status = s.id
+                WHERE u.nome = %s
+                ORDER BY l.data_registro DESC;
+            """
+            cursor.execute(query, (usuario_filtro,))
+        else:
+            query = """
+                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
+                FROM leituras l
+                JOIN usuarios u ON l.id_usuario = u.id
+                JOIN livros liv ON l.id_livro = liv.id
+                JOIN status_leitura s ON l.id_status = s.id
+                ORDER BY l.data_registro DESC;
+            """
+            cursor.execute(query)
+            
+        resultados = cursor.fetchall()
+        cursor.close()
+        banco.close()
+        return jsonify(resultados), 200
+    except Exception as erro:
+        return jsonify({"erro": f"Erro ao carregar relatório: {erro}"}), 500
 
-# 5. ROTA PARA ADICIONAR NOVA LEITURA
+@app.route('/login', methods=['POST'])
+def login():
+    dados = request.json
+    nome = dados.get('nick') or dados.get('nome')
+    senha = dados.get('senha')
+    try:
+        banco = conectar_banco()
+        cursor = obter_cursor(banco, dictionary=True)
+        query = "SELECT id, nome FROM usuarios WHERE nome = %s AND senha = %s"
+        cursor.execute(query, (nome, senha))
+        usuario = cursor.fetchone()
+        cursor.close()
+        banco.close()
+        
+        if usuario:
+            return jsonify({"mensagem": "Login bem-sucedido!", "usuario": {"id": usuario['id'], "nome": usuario['nome']}}), 200
+        else:
+            return jsonify({"erro": "Nome ou senha inválidos."}), 401
+    except Exception as erro:
+        return jsonify({"erro": f"Erro no login: {erro}"}), 500
+
+@app.route('/cadastrar_usuario', methods=['POST'])
+def cadastrar_usuario():
+    dados = request.json
+    nome = dados.get('nick') or dados.get('nome')
+    email = dados.get('email')
+    senha = dados.get('senha')
+    try:
+        banco = conectar_banco()
+        cursor = obter_cursor(banco, dictionary=True)
+        query = "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)"
+        cursor.execute(query, (nome, email, senha))
+        banco.commit()
+        cursor.close()
+        banco.close()
+        return jsonify({"mensagem": "Usuário cadastrado com sucesso!"}), 201
+    except Exception as erro:
+        return jsonify({"erro": f"Erro ao cadastrar usuário: {erro}"}), 500
+
 @app.route('/adicionar_leitura', methods=['POST'])
 def adicionar_leitura():
     dados = request.json
@@ -248,44 +150,59 @@ def adicionar_leitura():
     novo_titulo = dados.get('novo_titulo')
     novo_autor = dados.get('novo_autor')
     novo_genero = dados.get('novo_genero')
+    novo_link = dados.get('novo_link')
     
     try:
         banco = conectar_banco()
-        cursor = obter_cursor(banco, dictionary=True) # Dicionário ajuda a pegar o ID retornado no Postgres
+        cursor = obter_cursor(banco, dictionary=True)
         
         if id_livro == 0 or id_livro == "0":
-            # CORRIGIDO:
             if not novo_titulo or not novo_autor: 
+                cursor.close()
+                banco.close()
                 return jsonify({"erro": "Título e Autor do livro são necessários!"}), 400
             
-            # Lógica inteligente para capturar o ID do livro criado (funciona no MySQL e Postgres)
             if isinstance(banco, psycopg2.extensions.connection):
-                # No Postgres usamos RETURNING id
-                comando_livro = "INSERT INTO livros (titulo, autor, genero) VALUES (%s, %s, %s) RETURNING id;"
-                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero))
+                comando_livro = "INSERT INTO livros (titulo, autor, genero, link) VALUES (%s, %s, %s, %s) RETURNING id;"
+                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero, novo_link))
                 banco.commit()
                 id_livro = cursor.fetchone()['id']
             else:
-                # No MySQL local usamos cursor.lastrowid
-                comando_livro = "INSERT INTO livros (titulo, autor, genero) VALUES (%s, %s, %s);"
-                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero))
+                comando_livro = "INSERT INTO livros (titulo, autor, genero, link) VALUES (%s, %s, %s, %s);"
+                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero, novo_link))
                 banco.commit()
                 id_livro = cursor.lastrowid
-            
+        
         comando_leitura = """
-        INSERT INTO leituras (id_usuario, id_livro, id_status, nota, resenha)
-        VALUES (%s, %s, %s, %s, %s);
+            INSERT INTO leituras (id_usuario, id_livro, id_status, nota, resenha) 
+            VALUES (%s, %s, %s, %s, %s);
         """
         cursor.execute(comando_leitura, (id_usuario, id_livro, id_status, nota, resenha))
         banco.commit()
         
         cursor.close()
         banco.close()
-        
         return jsonify({"mensagem": "Leitura registrada com sucesso!"}), 201
     except Exception as erro:
-        return jsonify({"erro": f"Erro ao registrar leitura: {erro}"}), 500
+        return jsonify({"erro": f"Erro ao adicionar leitura: {erro}"}), 500
 
+@app.route('/atualizar_leitura/<int:id_leitura>', methods=['PUT'])
+def atualizar_leitura(id_leitura):
+    dados = request.json
+    id_status = dados.get('id_status')
+    nota = dados.get('nota')
+    resenha = dados.get('resenha')
+    try:
+        banco = conectar_banco()
+        cursor = obter_cursor(banco, dictionary=True)
+        query = "UPDATE leituras SET id_status = %s, nota = %s, resenha = %s WHERE id = %s"
+        cursor.execute(query, (id_status, nota, resenha, id_leitura))
+        banco.commit()
+        cursor.close()
+        banco.close()
+        return jsonify({"mensagem": "Leitura atualizada com sucesso!"}), 200
+    except Exception as erro:
+        return jsonify({"erro": f"Erro ao atualizar leitura: {erro}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True)
