@@ -1,5 +1,5 @@
-Confira o projeto rodando:
-https://sllnoliveira.github.io/folheando/
+Confira o projeto rodando e se quiser testar vai me ajudar muito:
+(https://folheando.onrender.com/)
 
 # 📖 Folheando - Gerenciador de Leituras
 
