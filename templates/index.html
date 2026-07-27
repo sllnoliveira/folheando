@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Folheando - Seu Gerenciador de Leituras</title>
     <!-- Vinculamos o nosso arquivo de estilo CSS aqui -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
@@ -55,7 +55,7 @@
             </div>
         </section>
         <section id="secao-biblioteca" class="tela-secao oculto">
-            <h2>📚 Biblioteca de Livros</h2>
+            <h2>📚 Biblioteca</h2>
             <p>Explore todos os livros cadastrados na plataforma e acesse seus links de leitura ou compra.</p>
             
             <!-- Lista de livros da biblioteca que será preenchida pelo JavaScript -->
@@ -176,6 +176,6 @@
     </footer>
 
     <!-- Vinculamos a nossa inteligência do JavaScript aqui -->
-    <script src="script.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
