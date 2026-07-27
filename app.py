@@ -51,23 +51,21 @@ def listar_relatorio():
 
         if usuario_filtro:
             query = """
-                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
+                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
                 JOIN status_leitura s ON l.id_status = s.id
-                WHERE u.nome = %s
-                ORDER BY l.data_registro DESC;
+                WHERE u.nome = %s;
             """
             cursor.execute(query, (usuario_filtro,))
         else:
             query = """
-                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
+                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
-                JOIN status_leitura s ON l.id_status = s.id
-                ORDER BY l.data_registro DESC;
+                JOIN status_leitura s ON l.id_status = s.id;
             """
             cursor.execute(query)
 
