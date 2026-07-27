@@ -55,7 +55,7 @@ def listar_relatorio():
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
-                JOIN status_leitura s ON l.status_id = s.id
+                JOIN status s ON l.id_status = s.id
                 WHERE u.nome = %s
                 ORDER BY l.data_registro DESC;
             """
@@ -66,7 +66,7 @@ def listar_relatorio():
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
-                JOIN status_leitura s ON l.status_id = s.id
+                JOIN status s ON l.id_status = s.id
                 ORDER BY l.data_registro DESC;
             """
             cursor.execute(query)
@@ -147,7 +147,7 @@ def adicionar_leitura():
             id_livro = cursor.fetchone()['id']
 
         comando_leitura = """
-            INSERT INTO leituras (usuario_id, livro_id, status_id, nota, resenha)
+            INSERT INTO leituras (usuario_id, livro_id, id_status, nota, resenha)
             VALUES (%s, %s, %s, %s, %s);
         """
         cursor.execute(comando_leitura, (id_usuario, id_livro, id_status, nota, resenha))
@@ -168,7 +168,7 @@ def atualizar_leitura(id_leitura):
     try:
         banco = conectar_banco()
         cursor = obter_cursor(banco, dictionary=True)
-        query = "UPDATE leituras SET status_id = %s, nota = %s, resenha = %s WHERE id = %s"
+        query = "UPDATE leituras SET id_status = %s, nota = %s, resenha = %s WHERE id = %s"
         cursor.execute(query, (id_status, nota, resenha, id_leitura))
         banco.commit()
         cursor.close()
