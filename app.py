@@ -1,7 +1,5 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import os
-import mysql.connector
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -9,52 +7,34 @@ app = Flask(__name__)
 CORS(app)
 
 def conectar_banco():
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return psycopg2.connect(database_url, sslmode='require')
-    else:
-        return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="folheando"
-        )
+    # Versão garantida com a porta 5432 do Supabase
+    database_url = "postgresql://postgres.qgqfuxjrvvlyeqyufwnd:Sullencpx2026@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
+    return psycopg2.connect(database_url, sslmode='require')
 
 def obter_cursor(banco, dictionary=False):
-    if isinstance(banco, psycopg2.extensions.connection):
-        return banco.cursor(cursor_factory=RealDictCursor)
-    else:
-        return banco.cursor(dictionary=dictionary)
+    return banco.cursor(cursor_factory=RealDictCursor)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
 
 @app.route('/livros', methods=['GET'])
 def listar_livros():
     try:
         banco = conectar_banco()
         cursor = obter_cursor(banco, dictionary=True)
-        
-        if isinstance(banco, psycopg2.extensions.connection):
-            query = """
-                SELECT 
-                    l.id, l.titulo, l.autor, l.genero, l.link,
-                    COALESCE(AVG(lt.nota), 0) as media_notas,
-                    STRING_AGG(CONCAT(u.nome, ': ', lt.resenha), '|||') as resenhas
-                FROM livros l
-                LEFT JOIN leituras lt ON l.id = lt.id_livro AND lt.resenha IS NOT NULL AND lt.resenha != ''
-                LEFT JOIN usuarios u ON lt.id_usuario = u.id
-                GROUP BY l.id, l.titulo, l.autor, l.genero, l.link;
-            """
-        else:
-            query = """
-                SELECT 
-                    l.id, l.titulo, l.autor, l.genero, l.link,
-                    COALESCE(AVG(lt.nota), 0) as media_notas,
-                    GROUP_CONCAT(CONCAT(u.nome, ': ', lt.resenha) SEPARATOR '|||') as resenhas
-                FROM livros l
-                LEFT JOIN leituras lt ON l.id = lt.id_livro AND lt.resenha IS NOT NULL AND lt.resenha != ''
-                LEFT JOIN usuarios u ON lt.id_usuario = u.id
-                GROUP BY l.id, l.titulo, l.autor, l.genero, l.link;
-            """
-        
+
+        query = """
+            SELECT 
+                l.id, l.titulo, l.autor, l.genero, l.link,
+                COALESCE(AVG(lt.nota), 0) as media_notas,
+                STRING_AGG(CONCAT(u.nome, ': ', lt.resenha), '|||') as resenhas
+            FROM livros l
+            LEFT JOIN leituras lt ON l.id = lt.id_livro AND lt.resenha IS NOT NULL AND lt.resenha != ''
+            LEFT JOIN usuarios u ON lt.id_usuario = u.id
+            GROUP BY l.id, l.titulo, l.autor, l.genero, l.link;
+        """
+
         cursor.execute(query)
         livros = cursor.fetchall()
         cursor.close()
@@ -69,7 +49,7 @@ def listar_relatorio():
     try:
         banco = conectar_banco()
         cursor = obter_cursor(banco, dictionary=True)
-        
+
         if usuario_filtro:
             query = """
                 SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
@@ -91,7 +71,7 @@ def listar_relatorio():
                 ORDER BY l.data_registro DESC;
             """
             cursor.execute(query)
-            
+
         resultados = cursor.fetchall()
         cursor.close()
         banco.close()
@@ -112,7 +92,7 @@ def login():
         usuario = cursor.fetchone()
         cursor.close()
         banco.close()
-        
+
         if usuario:
             return jsonify({"mensagem": "Login bem-sucedido!", "usuario": {"id": usuario['id'], "nome": usuario['nome']}}), 200
         else:
@@ -146,40 +126,34 @@ def adicionar_leitura():
     id_status = dados.get('id_status')
     nota = dados.get('nota')
     resenha = dados.get('resenha')
-    
+
     novo_titulo = dados.get('novo_titulo')
     novo_autor = dados.get('novo_autor')
     novo_genero = dados.get('novo_genero')
     novo_link = dados.get('novo_link')
-    
+
     try:
         banco = conectar_banco()
         cursor = obter_cursor(banco, dictionary=True)
-        
+
         if id_livro == 0 or id_livro == "0":
-            if not novo_titulo or not novo_autor: 
+            if not novo_titulo or not novo_autor:
                 cursor.close()
                 banco.close()
                 return jsonify({"erro": "Título e Autor do livro são necessários!"}), 400
-            
-            if isinstance(banco, psycopg2.extensions.connection):
-                comando_livro = "INSERT INTO livros (titulo, autor, genero, link) VALUES (%s, %s, %s, %s) RETURNING id;"
-                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero, novo_link))
-                banco.commit()
-                id_livro = cursor.fetchone()['id']
-            else:
-                comando_livro = "INSERT INTO livros (titulo, autor, genero, link) VALUES (%s, %s, %s, %s);"
-                cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero, novo_link))
-                banco.commit()
-                id_livro = cursor.lastrowid
-        
+
+            comando_livro = "INSERT INTO livros (titulo, autor, genero, link) VALUES (%s, %s, %s, %s) RETURNING id;"
+            cursor.execute(comando_livro, (novo_titulo, novo_autor, novo_genero, novo_link))
+            banco.commit()
+            id_livro = cursor.fetchone()['id']
+
         comando_leitura = """
-            INSERT INTO leituras (id_usuario, id_livro, id_status, nota, resenha) 
+            INSERT INTO leituras (id_usuario, id_livro, id_status, nota, resenha)
             VALUES (%s, %s, %s, %s, %s);
         """
         cursor.execute(comando_leitura, (id_usuario, id_livro, id_status, nota, resenha))
         banco.commit()
-        
+
         cursor.close()
         banco.close()
         return jsonify({"mensagem": "Leitura registrada com sucesso!"}), 201
