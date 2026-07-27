@@ -1,6 +1,6 @@
 // URL base da nossa API em Flask
-//const API_URL = "https://folheando-api.onrender.com";
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://folheando.onrender.com";
+
 
 // Variável para guardar o usuário logado na sessão do navegador
 let usuarioLogado = null;
