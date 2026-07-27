@@ -7,8 +7,8 @@ app = Flask(__name__)
 CORS(app)
 
 def conectar_banco():
-    # Versão garantida com a porta 5432 do Supabase e aspas corretas
-    database_url = "postgresql://postgres.qgqfuxjrvvlyeqyufwnd:Sullencpx2026@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
+    # Versão corrigida com o ID correto do seu Supabase (pdgodnriqadkyyywnsjb)
+    database_url = "postgresql://postgres.pdgodnriqadkyyywnsjb:sorvetedepedra@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
     return psycopg2.connect(database_url, sslmode='require')
 
 def obter_cursor(banco, dictionary=False):
