@@ -55,7 +55,7 @@ def listar_relatorio():
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
-                JOIN status s ON l.id_status = s.id
+                JOIN status_leitura s ON l.id_status = s.id
                 WHERE u.nome = %s
                 ORDER BY l.data_registro DESC;
             """
@@ -66,7 +66,7 @@ def listar_relatorio():
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
-                JOIN status s ON l.id_status = s.id
+                JOIN status_leitura s ON l.id_status = s.id
                 ORDER BY l.data_registro DESC;
             """
             cursor.execute(query)
