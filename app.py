@@ -160,9 +160,12 @@ def adicionar_leitura():
 @app.route('/atualizar_leitura/<int:id_leitura>', methods=['PUT'])
 def atualizar_leitura(id_leitura):
     dados = request.json
+    print("DADOS RECEBIDOS DO FRONT:", dados) # <--- Adicione isso aqui
+    
     id_status = dados.get('id_status')
     nota = dados.get('nota')
     resenha = dados.get('resenha')
+    
     try:
         banco = conectar_banco()
         cursor = obter_cursor(banco, dictionary=True)
@@ -173,6 +176,7 @@ def atualizar_leitura(id_leitura):
         banco.close()
         return jsonify({"mensagem": "Leitura atualizada com sucesso!"}), 200
     except Exception as erro:
+        print("ERRO NO UPDATE:", erro) # <--- E isso aqui
         return jsonify({"erro": f"Erro ao atualizar leitura: {erro}"}), 500
 
 @app.route('/deletar_leitura/<int:id>', methods=['DELETE'])
