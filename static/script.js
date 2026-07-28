@@ -361,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function abrirModalEdicao(idLeitura, statusAtual) {
-    let novoStatusId = prompt("Digite o novo ID do status (1: Lendo, 2: Lido, 3: Quero Ler, 4: Abandonado):", "2");
+    let novoStatusId = prompt("Escolha o novo Status:\n1: Lendo 📖\n2: Lido ✅\n3: Quero Ler 📌\n4: Abandonei ❌", "2");
     if (!novoStatusId) return;
 
     let novaNota = prompt("Digite a nova nota (1 a 5):", "5");
@@ -384,7 +384,7 @@ async function abrirModalEdicao(idLeitura, statusAtual) {
 
         if (resposta.ok) {
             alert(resultado.mensagem);
-            carregarRelatorio();
+            carregarRelatorio(); // Recarrega a lista para mostrar o status novo atualizado
         } else {
             alert("Erro: " + resultado.erro);
         }
