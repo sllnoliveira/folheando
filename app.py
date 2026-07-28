@@ -51,7 +51,7 @@ def listar_relatorio():
 
         if usuario_filtro:
             query = """
-                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha
+                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
@@ -61,7 +61,7 @@ def listar_relatorio():
             cursor.execute(query, (usuario_filtro,))
         else:
             query = """
-                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha
+                SELECT l.id, u.nome as leitor, liv.titulo, s.nome as status, l.nota, l.resenha, l.data_registro
                 FROM leituras l
                 JOIN usuarios u ON l.usuario_id = u.id
                 JOIN livros liv ON l.livro_id = liv.id
@@ -75,7 +75,7 @@ def listar_relatorio():
         return jsonify(resultados), 200
     except Exception as erro:
         return jsonify({"erro": f"Erro ao carregar relatório: {erro}"}), 500
-
+    
 @app.route('/login', methods=['POST'])
 def login():
     dados = request.json
@@ -174,6 +174,22 @@ def atualizar_leitura(id_leitura):
         return jsonify({"mensagem": "Leitura atualizada com sucesso!"}), 200
     except Exception as erro:
         return jsonify({"erro": f"Erro ao atualizar leitura: {erro}"}), 500
+
+@app.route('/deletar_leitura/<int:id>', methods=['DELETE'])
+def deletar_leitura(id):
+    try:
+        banco = conectar_banco()
+        cursor = obter_cursor(banco, dictionary=True)
+        
+        cursor.execute("DELETE FROM leituras WHERE id = %s", (id,))
+        banco.commit()
+        
+        cursor.close()
+        banco.close()
+        
+        return jsonify({"mensagem": "Leitura deletada com sucesso!"}), 200
+    except Exception as erro:
+        return jsonify({"erro": f"Erro ao deletar leitura: {erro}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

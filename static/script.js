@@ -32,6 +32,7 @@ function mostrarSecao(idSecao) {
 }
 
 // 2. BUSCAR E EXIBIR O RELATÓRIO DE LEITURAS
+// 2. BUSCAR E EXIBIR O RELATÓRIO DE LEITURAS
 async function carregarRelatorio() {
     const listaLeituras = document.getElementById('lista-leituras');
     listaLeituras.innerHTML = '<p class="carregando">Carregando leituras...</p>';
@@ -71,9 +72,14 @@ async function carregarRelatorio() {
                 dataFormatada = dataObj.toLocaleDateString('pt-BR');
             }
 
-            let botaoEditar = "";
+            let botoesAcao = "";
             if (usuarioLogado && leitura.leitor === usuarioLogado.nome) {
-                botaoEditar = `<button class="btn-secundario" onclick="abrirModalEdicao(${leitura.id}, '${leitura.status}')">✏️ Atualizar Leitura</button>`;
+                botoesAcao = `
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <button class="btn-secundario" onclick="abrirModalEdicao(${leitura.id}, '${leitura.status}')">✏️ Atualizar</button>
+                        <button class="btn-secundario" style="background-color: #ffe6e6; color: #d63384; border: 1px solid #d63384;" onclick="deletarLeitura(${leitura.id})">🗑️ Excluir</button>
+                    </div>
+                `;
             }
 
             cartao.innerHTML = `
@@ -86,13 +92,38 @@ async function carregarRelatorio() {
                     <span class="status-badge">${leitura.status}</span>
                 </div>
                 ${resenha}
-                <div style="margin-top: 10px;">${botaoEditar}</div>
+                ${botoesAcao}
             `;
             listaLeituras.appendChild(cartao);
         });
 
     } catch (erro) {
         listaLeituras.innerHTML = `<p class="carregando" style="color: red;">❌ Não foi possível carregar as leituras: ${erro.message}</p>`;
+    }
+}
+
+// FUNÇÃO PARA DELETAR A LEITURA
+async function deletarLeitura(idLeitura) {
+    if (!confirm("Tem certeza de que deseja excluir este registro de leitura?")) {
+        return;
+    }
+
+    try {
+        const resposta = await fetch(`${API_URL}/deletar_leitura/${idLeitura}`, {
+            method: 'DELETE'
+        });
+
+        const resultado = await resposta.json();
+
+        if (resposta.ok) {
+            alert(resultado.mensagem);
+            carregarRelatorio();
+        } else {
+            alert("Erro: " + resultado.erro);
+        }
+    } catch (erro) {
+        console.error("Erro na requisição:", erro);
+        alert("Não foi possível conectar ao servidor para excluir.");
     }
 }
 
